@@ -1,5 +1,8 @@
 'use strict';
 //--------------------------------------------------------------------------------
+const ASC_SORTING = 1;
+const DESC_SORTING = -1;
+//--------------------------------------------------------------------------------
 let app;
 let crtEl = document.createElement.bind( document );
 let crtTxt = document.createTextNode.bind( document );
@@ -14,14 +17,15 @@ class App {
                                                          el.skills                                                         
                                                        ));                
         this.selectedStudent = null;
+        this.tableEl = null;        
+        this.sortKey = '';
+        this.sortDir = ASC_SORTING;
     }
     //--------------------------------------------------------------------------------
     render() {
         let containerEl = document.getElementById( 'container' );
         let formEl = document.createElement( 'form' );
         let buttonEl;
-        let tableEl;
-        let rowEl
         
         formEl = document.createElement( 'form' );
         containerEl.appendChild( formEl );
@@ -38,21 +42,40 @@ class App {
         buttonEl = document.createElement( 'button' );
         formEl.appendChild( buttonEl ).appendChild( crtTxt( 'Cancel' ) );
 
-        tableEl = document.createElement( 'table' );
+        this.containerEl = containerEl;
+        this.renderTable();
+
+    }
+    //--------------------------------------------------------------------------------
+    renderTable() {
+        let rowEl;
+        let thEl;
+        let tableEl = this.tableEl || document.createElement( 'table' );
+
+        tableEl.innerHTML = '';
+
         rowEl = crtEl( 'tr' );
-        rowEl.appendChild( crtEl( 'tr' ) ).appendChild( crtTxt( 'Student' ) );
-        rowEl.appendChild( crtEl( 'tr' ) ).appendChild( crtTxt( 'Email' ) );        
-        rowEl.appendChild( crtEl( 'tr' ) ).appendChild( crtTxt( 'Profile picture' ) );        
-        rowEl.appendChild( crtEl( 'tr' ) ).appendChild( crtTxt( 'Skill' ) );        
-        rowEl.appendChild( crtEl( 'tr' ) ).appendChild( crtTxt( 'Controls' ) );        
+
+        ( thEl = crtEl( 'th' ) ).onclick = () => this.sort( 'fullName' );
+        rowEl.appendChild( thEl ).appendChild( crtTxt( 'Student' ) );
+        ( thEl = crtEl( 'th' ) ).onclick = () => this.sort( 'email' );
+        rowEl.appendChild( thEl ).appendChild( crtTxt( 'Email' ) );        
+        rowEl.appendChild( crtEl( 'th' ) ).appendChild( crtTxt( 'Profile picture' ) );        
+        ( thEl = crtEl( 'th' ) ).onclick = () => this.sort( 'skills' );
+        rowEl.appendChild( thEl ).appendChild( crtTxt( 'Skills' ) );        
+        rowEl.appendChild( crtEl( 'th' ) ).appendChild( crtTxt( 'Controls' ) );        
+
+        tableEl.appendChild( rowEl );
 
         for( let student of this.students ) {
             tableEl.appendChild( student.getStudentAsLine( () => this.viewStudent( student ),
                                                            () => this.removeStudent( student )
                                                          ) );
         }
-        containerEl.appendChild( tableEl );
-
+        this.containerEl.appendChild( tableEl );
+        if ( !this.tableEl ) {
+            this.tableEl = tableEl;
+        }
     }
     //--------------------------------------------------------------------------------
     createFormField( formEl,  name, refName ) {
@@ -68,7 +91,8 @@ class App {
     }
     //--------------------------------------------------------------------------------
     removeStudent( student ) {
-        this.students = this.students.filter( el => el.email === student.email );
+        this.students = this.students.filter( el => el.email !== student.email );
+        this.tableEl.removeChild( student.getDocEl() );        
     }
     //--------------------------------------------------------------------------------
     updateStudent( student ) {
@@ -81,7 +105,22 @@ class App {
     //--------------------------------------------------------------------------------
     viewStudent( student ) {
         this.selectedStudent = student;
+
         this.nameInputEl.value = student.name;
+        this.lastNameInputEl.value = student.lastName;
+        this.emailInputEl.value = student.email;
+        this.skillsInputEl.value = student.skills;
+        this.profileEl.value = student.img;
+    }
+    //--------------------------------------------------------------------------------
+    sort( key ) {
+        let sortDir = this.sortKey === key ? -this.sortDir : ASC_SORTING;
+
+        this.students.sort( ( a, b ) => a[ key ] < b[ key ] ? sortDir : -sortDir );
+        this.renderTable();
+
+        this.sortKey = key;
+        this.sortDir = sortDir;
     }
     //--------------------------------------------------------------------------------
 }
@@ -90,17 +129,23 @@ class Student {
     constructor( name, lastName, img, coverImg, email, skills ) {
         this.name = name;
         this.lastName = lastName;
+        this.fullName = `${name} ${lastName}`;
         this.img = img;
         this.coverImg = coverImg;
         this.email = email;
         this.skills = skills;
+        this.docEl = null;
+    }
+    //--------------------------------------------------------------------------------
+    getDocEl() {
+        return this.docEl;
     }
     //--------------------------------------------------------------------------------
     getStudentAsLine( editHandler, removeHandler ) {
         let rowEl = document.createElement( 'tr' );
         let buttonEl;
 
-        rowEl.appendChild( crtEl( 'td' ) ).appendChild( crtTxt( `${this.name} ${this.lastName}` ) );        
+        rowEl.appendChild( crtEl( 'td' ) ).appendChild( crtTxt( this.fullName ) );        
         rowEl.appendChild( crtEl( 'td' ) ).appendChild( crtTxt( this.email ) );        
         rowEl.appendChild( crtEl( 'td' ) ).appendChild( crtEl( 'img' ) );        
         rowEl.appendChild( crtEl( 'td' ) ).appendChild( crtTxt( this.skills ) );
@@ -112,6 +157,7 @@ class Student {
         ( buttonEl = crtEl('button' ) ).onclick = removeHandler;
         rowEl.appendChild( crtEl( 'td' ) ).appendChild( buttonEl )
                                           .appendChild( crtTxt( 'Remove' ) );
+        this.docEl = rowEl;                                
 
         return rowEl;
     }

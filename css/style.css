@@ -1,0 +1,7 @@
+form {
+    width: 500px;    
+    background-color: blue;    
+}
+table, tr, th, td {
+    border: 1px solid black;
+}

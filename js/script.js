@@ -1,3 +1,123 @@
+'use strict';
+//--------------------------------------------------------------------------------
+let app;
+let crtEl = document.createElement.bind( document );
+let crtTxt = document.createTextNode.bind( document );
+//--------------------------------------------------------------------------------
+class App {
+    constructor( students ) {
+        this.students = students.map( el => new Student( el.name,
+                                                         el.lastName,
+                                                         el.img,                                                         
+                                                         el.coverImage,
+                                                         el.email,                                                                                                                  
+                                                         el.skills                                                         
+                                                       ));                
+        this.selectedStudent = null;
+    }
+    //--------------------------------------------------------------------------------
+    render() {
+        let containerEl = document.getElementById( 'container' );
+        let formEl = document.createElement( 'form' );
+        let buttonEl;
+        let tableEl;
+        let rowEl
+        
+        formEl = document.createElement( 'form' );
+        containerEl.appendChild( formEl );
+
+        this.createFormField( formEl, 'Name', 'nameInputEl' );
+        this.createFormField( formEl, 'Lastname', 'lastNameInputEl' );
+        this.createFormField( formEl, 'Email', 'emailInputEl' );
+        this.createFormField( formEl, 'Skills', 'skillsInputEl' );
+        this.createFormField( formEl, 'Profile picture', 'profileEl' );
+
+        buttonEl = document.createElement( 'button' );        
+        formEl.appendChild( buttonEl ).appendChild( crtTxt( 'Save' ) );
+
+        buttonEl = document.createElement( 'button' );
+        formEl.appendChild( buttonEl ).appendChild( crtTxt( 'Cancel' ) );
+
+        tableEl = document.createElement( 'table' );
+        rowEl = crtEl( 'tr' );
+        rowEl.appendChild( crtEl( 'tr' ) ).appendChild( crtTxt( 'Student' ) );
+        rowEl.appendChild( crtEl( 'tr' ) ).appendChild( crtTxt( 'Email' ) );        
+        rowEl.appendChild( crtEl( 'tr' ) ).appendChild( crtTxt( 'Profile picture' ) );        
+        rowEl.appendChild( crtEl( 'tr' ) ).appendChild( crtTxt( 'Skill' ) );        
+        rowEl.appendChild( crtEl( 'tr' ) ).appendChild( crtTxt( 'Controls' ) );        
+
+        for( let student of this.students ) {
+            tableEl.appendChild( student.getStudentAsLine( () => this.viewStudent( student ),
+                                                           () => this.removeStudent( student )
+                                                         ) );
+        }
+        containerEl.appendChild( tableEl );
+
+    }
+    //--------------------------------------------------------------------------------
+    createFormField( formEl,  name, refName ) {
+        let labelEl = document.createElement( 'label' );
+        let inputEl = document.createElement( 'input' );
+
+        this[ refName ] = inputEl;
+
+        labelEl.appendChild( crtTxt( name ) );        
+        labelEl.appendChild( inputEl );
+        formEl.appendChild( labelEl );
+        formEl.appendChild( crtEl( 'br' ) );
+    }
+    //--------------------------------------------------------------------------------
+    removeStudent( student ) {
+        this.students = this.students.filter( el => el.email === student.email );
+    }
+    //--------------------------------------------------------------------------------
+    updateStudent( student ) {
+        let stdIndex = this.students.findIndex( el => el.email === student.email );
+        
+        if( stdindex !== -1  ) {
+            this.studens[ stdIndex ] = student;
+        }
+    }    
+    //--------------------------------------------------------------------------------
+    viewStudent( student ) {
+        this.selectedStudent = student;
+        this.nameInputEl.value = student.name;
+    }
+    //--------------------------------------------------------------------------------
+}
+//--------------------------------------------------------------------------------
+class Student {
+    constructor( name, lastName, img, coverImg, email, skills ) {
+        this.name = name;
+        this.lastName = lastName;
+        this.img = img;
+        this.coverImg = coverImg;
+        this.email = email;
+        this.skills = skills;
+    }
+    //--------------------------------------------------------------------------------
+    getStudentAsLine( editHandler, removeHandler ) {
+        let rowEl = document.createElement( 'tr' );
+        let buttonEl;
+
+        rowEl.appendChild( crtEl( 'td' ) ).appendChild( crtTxt( `${this.name} ${this.lastName}` ) );        
+        rowEl.appendChild( crtEl( 'td' ) ).appendChild( crtTxt( this.email ) );        
+        rowEl.appendChild( crtEl( 'td' ) ).appendChild( crtEl( 'img' ) );        
+        rowEl.appendChild( crtEl( 'td' ) ).appendChild( crtTxt( this.skills ) );
+
+        ( buttonEl = crtEl('button' ) ).onclick = editHandler;
+        rowEl.appendChild( crtEl( 'td' ) ).appendChild(buttonEl )
+                                          .appendChild( crtTxt( 'Edit' ) );       
+
+        ( buttonEl = crtEl('button' ) ).onclick = removeHandler;
+        rowEl.appendChild( crtEl( 'td' ) ).appendChild( buttonEl )
+                                          .appendChild( crtTxt( 'Remove' ) );
+
+        return rowEl;
+    }
+    //--------------------------------------------------------------------------------
+}
+//--------------------------------------------------------------------------------
 (function () {
     var students = [{
             name: 'Liudmyla',
@@ -160,5 +280,6 @@
             skills: ['JavaScript', 'HTML', 'CSS']
         }
     ];
-
+    app = new App( students );
+    app.render();
 })();

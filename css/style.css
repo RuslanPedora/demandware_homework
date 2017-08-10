@@ -1,10 +1,17 @@
-.clicable {
+.clickable {
     cursor: pointer;
 }
 #container form {
     width: 500px;    
     background-color: blue;    
 }
-#container table, tr, th, td {
-    border: 1px solid black;
+#container table th, td {
+    border: 1px solid grey;
+}
+#container table td {
+    padding: 5px;
+}
+#container table img {
+    max-width: 75px;
+    max-height: 75px;
 }

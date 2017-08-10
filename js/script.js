@@ -18,8 +18,9 @@ class App {
                                                        ));                
         this.selectedStudent = null;
         this.tableEl = null;        
+        this.tableHeaderEl = null;
         this.sortKey = '';
-        this.sortDir = ASC_SORTING;
+        this.sortDir = ASC_SORTING;        
     }
     //--------------------------------------------------------------------------------
     render() {
@@ -28,18 +29,22 @@ class App {
         let buttonEl;
         
         formEl = document.createElement( 'form' );
+        formEl.onsubmit = ( event ) => this.save( event );
         containerEl.appendChild( formEl );
 
-        this.createFormField( formEl, 'Name', 'nameInputEl' );
-        this.createFormField( formEl, 'Lastname', 'lastNameInputEl' );
-        this.createFormField( formEl, 'Email', 'emailInputEl' );
-        this.createFormField( formEl, 'Skills', 'skillsInputEl' );
-        this.createFormField( formEl, 'Profile picture', 'profileEl' );
+        this.createFormField( formEl, 'Name', 'nameInputEl', 'text' );
+        this.createFormField( formEl, 'Lastname', 'lastNameInputEl', 'text' );
+        this.createFormField( formEl, 'Email', 'emailInputEl', 'email' );
+        this.createFormField( formEl, 'Skills', 'skillsInputEl', 'text' );
+        this.createFormField( formEl, 'Profile picture', 'profileEl', 'text' );
 
         buttonEl = document.createElement( 'button' );        
+        buttonEl.type = 'submit';
         formEl.appendChild( buttonEl ).appendChild( crtTxt( 'Save' ) );
 
         buttonEl = document.createElement( 'button' );
+        buttonEl.type = 'reset';
+        buttonEl.onclick = () => this.selectedStudent = null;
         formEl.appendChild( buttonEl ).appendChild( crtTxt( 'Cancel' ) );
 
         this.containerEl = containerEl;
@@ -49,36 +54,45 @@ class App {
     //--------------------------------------------------------------------------------
     renderTable() {
         let rowEl;
-        let thEl;
-        let tableEl = this.tableEl || document.createElement( 'table' );
+        let tableEl = document.createElement( 'table' );
 
-        tableEl.innerHTML = '';
+        tableEl.className = 'table table-hover';
 
         rowEl = crtEl( 'tr' );
-
-        ( thEl = crtEl( 'th' ) ).onclick = () => this.sort( 'fullName' );
-        rowEl.appendChild( thEl ).appendChild( crtTxt( 'Student' ) );
-        ( thEl = crtEl( 'th' ) ).onclick = () => this.sort( 'email' );
-        rowEl.appendChild( thEl ).appendChild( crtTxt( 'Email' ) );        
+        rowEl.appendChild( this.createSortableCol( 'fullName', 'Student' ) );
+        rowEl.appendChild( this.createSortableCol( 'email', 'Email' ) );
         rowEl.appendChild( crtEl( 'th' ) ).appendChild( crtTxt( 'Profile picture' ) );        
-        ( thEl = crtEl( 'th' ) ).onclick = () => this.sort( 'skills' );
-        rowEl.appendChild( thEl ).appendChild( crtTxt( 'Skills' ) );        
+        rowEl.appendChild( this.createSortableCol( 'skills', 'Skills' ) );
         rowEl.appendChild( crtEl( 'th' ) ).appendChild( crtTxt( 'Controls' ) );        
 
         tableEl.appendChild( rowEl );
+        this.tableHeaderEl = rowEl;
 
         for( let student of this.students ) {
-            tableEl.appendChild( student.getStudentAsLine( () => this.viewStudent( student ),
-                                                           () => this.removeStudent( student )
+            tableEl.appendChild( student.getStudentAsLine( ( event ) => { this.viewStudent( student ); event.stopPropagation(); },
+                                                           ( event ) => { this.removeStudent( student ); event.stopPropagation(); },
+                                                           () => alert( student.fullName ),
                                                          ) );
         }
         this.containerEl.appendChild( tableEl );
+        this.refreshTableHeader( '' );
         if ( !this.tableEl ) {
             this.tableEl = tableEl;
         }
     }
     //--------------------------------------------------------------------------------
-    createFormField( formEl,  name, refName ) {
+    createSortableCol( sortKeyName, columnName ) {
+        let thEl;
+
+        ( thEl = crtEl( 'th' ) ).onclick = () => this.sort( sortKeyName, columnName );
+        thEl.appendChild( crtEl( 'span' ) );
+        thEl.appendChild( crtTxt( columnName ) );
+        thEl.className = 'clickable';
+
+        return thEl;
+    }
+    //--------------------------------------------------------------------------------
+    createFormField( formEl, name, refName, type, pattern ) {
         let labelEl = document.createElement( 'label' );
         let inputEl = document.createElement( 'input' );
 
@@ -86,6 +100,9 @@ class App {
 
         labelEl.appendChild( crtTxt( name ) );        
         labelEl.appendChild( inputEl );
+        inputEl.placeholder = 'Input student ' + name;
+        inputEl.required = true;
+        inputEl.type = type;
         formEl.appendChild( labelEl );
         formEl.appendChild( crtEl( 'br' ) );
     }
@@ -93,6 +110,11 @@ class App {
     removeStudent( student ) {
         this.students = this.students.filter( el => el.email !== student.email );
         this.tableEl.removeChild( student.getDocEl() );        
+    }
+    //--------------------------------------------------------------------------------
+    save( event ) {
+        alert( 'submitin wothout reloading' );
+        event.preventDefault();
     }
     //--------------------------------------------------------------------------------
     updateStudent( student ) {
@@ -113,16 +135,38 @@ class App {
         this.profileEl.value = student.img;
     }
     //--------------------------------------------------------------------------------
-    sort( key ) {
+    sort( key, columnTitle ) {
         let sortDir = this.sortKey === key ? -this.sortDir : ASC_SORTING;
+        let tempNodes = this.students.map( el => el.getDocEl() );
 
-        this.students.sort( ( a, b ) => a[ key ] < b[ key ] ? sortDir : -sortDir );
-        this.renderTable();
+        this.students.sort( ( a, b ) => a[ key ] > b[ key ] ? sortDir : -sortDir );
+
+        for ( let i = 0; i < this.students.length; i ++ ) {
+            let student = this.students[ i ];
+            student.putStudentIntoLine( tempNodes[ i ], 
+                                        ( event ) => { this.viewStudent( student ); event.stopPropagation(); },
+                                        ( event ) => { this.removeStudent( student ); event.stopPropagation(); },            
+                                        () => alert( student.fullName ) );
+        }
 
         this.sortKey = key;
         this.sortDir = sortDir;
+        this.refreshTableHeader( columnTitle );
     }
     //--------------------------------------------------------------------------------
+    refreshTableHeader( columnTitle ) {
+        for ( let el of this.tableHeaderEl.children ) {
+            if ( el.children.length > 0 ) {
+                if ( el.innerText === columnTitle ) {
+                    el.children[ 0 ].className = this.sortDir > 0 ? 'glyphicon glyphicon-sort-by-alphabet' : 
+                                                                    'glyphicon glyphicon-sort-by-alphabet-alt';
+                }
+                else {
+                    el.children[ 0 ].className = 'glyphicon glyphicon-sort';
+                }
+            }            
+        }
+    }
 }
 //--------------------------------------------------------------------------------
 class Student {
@@ -141,27 +185,51 @@ class Student {
         return this.docEl;
     }
     //--------------------------------------------------------------------------------
-    getStudentAsLine( editHandler, removeHandler ) {
+    getStudentAsLine( editHandler, removeHandler, alertHandler ) {
         let rowEl = document.createElement( 'tr' );
-        let buttonEl;
+        let controlEl;        
+        let imgEl;
+        let tdEl;
 
         rowEl.appendChild( crtEl( 'td' ) ).appendChild( crtTxt( this.fullName ) );        
         rowEl.appendChild( crtEl( 'td' ) ).appendChild( crtTxt( this.email ) );        
-        rowEl.appendChild( crtEl( 'td' ) ).appendChild( crtEl( 'img' ) );        
+        imgEl = rowEl.appendChild( crtEl( 'td' ) ).appendChild( crtEl( 'img' ) );
+        imgEl.src = this.img;
+        imgEl.alt = 'Userpic';
         rowEl.appendChild( crtEl( 'td' ) ).appendChild( crtTxt( this.skills ) );
 
-        ( buttonEl = crtEl('button' ) ).onclick = editHandler;
-        rowEl.appendChild( crtEl( 'td' ) ).appendChild(buttonEl )
-                                          .appendChild( crtTxt( 'Edit' ) );       
+        controlEl = crtEl('span' );
+        controlEl.className = 'glyphicon glyphicon-edit';
+        ( tdEl = crtEl( 'td' ) ).onclick = editHandler;
+        tdEl.className = 'clickable';
+        rowEl.appendChild( tdEl ).appendChild(controlEl )
+                                 .appendChild( crtTxt( 'Edit' ) );       
 
-        ( buttonEl = crtEl('button' ) ).onclick = removeHandler;
-        rowEl.appendChild( crtEl( 'td' ) ).appendChild( buttonEl )
-                                          .appendChild( crtTxt( 'Remove' ) );
-        this.docEl = rowEl;                                
+        controlEl = crtEl('span' );
+        controlEl.className = 'glyphicon glyphicon-trash';
+        ( tdEl = crtEl( 'td' ) ).onclick = removeHandler;
+        tdEl.className = 'clickable';
+        rowEl.appendChild( tdEl ).appendChild( controlEl )
+                                 .appendChild( crtTxt( 'Remove' ) );
+
+        rowEl.onclick = alertHandler;                        
+        this.docEl = rowEl;
 
         return rowEl;
     }
     //--------------------------------------------------------------------------------
+    putStudentIntoLine( docEl, editHandler, removeHandler, alertHandler ) {
+        docEl.children[ 0 ].innerText = this.fullName;
+        docEl.children[ 1 ].innerText = this.email;
+        docEl.children[ 2 ].children[ 0 ].src = this.img;
+        docEl.children[ 3 ].innerText = this.skills;
+        docEl.children[ 4 ].onclick = editHandler;
+        docEl.children[ 5 ].onclick = removeHandler;
+        
+        docEl.onclick = alertHandler;                        
+
+        this.docEl = docEl;
+    }
 }
 //--------------------------------------------------------------------------------
 (function () {

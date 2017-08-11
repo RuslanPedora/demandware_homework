@@ -17,7 +17,8 @@ class App {
                                                          el.skills                                                         
                                                        ));                
         this.selectedStudent = null;
-        this.tableEl = null;        
+        this.tableEl = null;
+        this.fromEl = null;
         this.tableHeaderEl = null;
         this.sortKey = '';
         this.sortDir = ASC_SORTING;        
@@ -48,13 +49,18 @@ class App {
         formEl.appendChild( buttonEl ).appendChild( crtTxt( 'Cancel' ) );
 
         this.containerEl = containerEl;
-        this.renderTable();
-
+        this.formEl = formEl;
+        this.renderPopup();
+        this.renderTable();        
     }
     //--------------------------------------------------------------------------------
     renderTable() {
         let rowEl;
+        let thEl;
         let tableEl = document.createElement( 'table' );
+
+        this.viewStudent = this.viewStudent.bind( this );
+        this.removeStudent = this.removeStudent.bind( this );
 
         tableEl.className = 'table table-hover';
 
@@ -63,22 +69,53 @@ class App {
         rowEl.appendChild( this.createSortableCol( 'email', 'Email' ) );
         rowEl.appendChild( crtEl( 'th' ) ).appendChild( crtTxt( 'Profile picture' ) );        
         rowEl.appendChild( this.createSortableCol( 'skills', 'Skills' ) );
-        rowEl.appendChild( crtEl( 'th' ) ).appendChild( crtTxt( 'Controls' ) );        
+        thEl = crtEl( 'th' );
+        thEl.colSpan = 2;
+        rowEl.appendChild( thEl ).appendChild( crtTxt( 'Controls' ) );        
 
         tableEl.appendChild( rowEl );
         this.tableHeaderEl = rowEl;
 
         for( let student of this.students ) {
-            tableEl.appendChild( student.getStudentAsLine( ( event ) => { this.viewStudent( student ); event.stopPropagation(); },
-                                                           ( event ) => { this.removeStudent( student ); event.stopPropagation(); },
-                                                           () => alert( student.fullName ),
-                                                         ) );
+            tableEl.appendChild( student.getStudentAsLine() );
+            student.setHandlers( this.viewStudent, this.removeStudent, this.showMessage );
         }
         this.containerEl.appendChild( tableEl );
         this.refreshTableHeader( '' );
         if ( !this.tableEl ) {
             this.tableEl = tableEl;
         }
+    }
+    //--------------------------------------------------------------------------------
+    renderPopup() {        
+        let closeEl = crtEl( 'div' );
+        let messageEl = crtEl( 'div' );        
+        let messageWrapEl = crtEl( 'div' );
+        let coverEl = crtEl( 'div' );
+
+        coverEl.style.display = 'none';
+        closeEl.id = 'close-message';
+        closeEl.className = 'glyphicon glyphicon-remove-circle clickable';
+        closeEl.onclick = () => coverEl.style.display = 'none';
+        
+        messageEl.id = 'message-box';
+
+        messageWrapEl.appendChild( closeEl );
+        messageWrapEl.appendChild( messageEl );
+        messageWrapEl.id = 'message-wrapper';
+
+        coverEl.appendChild( messageWrapEl );
+        coverEl.id = 'message-cover';
+
+        this.coverEl = coverEl;
+        this.messageEl = messageEl;
+        this.containerEl.appendChild( coverEl );
+        this.showMessage = this.showMessage.bind( this );
+    }
+    //--------------------------------------------------------------------------------
+    showMessage( message ) {
+        this.messageEl.innerText = message;
+        this.coverEl.style.display = 'initial';
     }
     //--------------------------------------------------------------------------------
     createSortableCol( sortKeyName, columnName ) {
@@ -108,21 +145,44 @@ class App {
     }
     //--------------------------------------------------------------------------------
     removeStudent( student ) {
-        this.students = this.students.filter( el => el.email !== student.email );
+        this.students = this.students.filter( el => el !== student );
         this.tableEl.removeChild( student.getDocEl() );        
     }
     //--------------------------------------------------------------------------------
-    save( event ) {
-        alert( 'submitin wothout reloading' );
+    save( event ) {        
+        let newStudent = new Student( this.nameInputEl.value,
+                                             this.lastNameInputEl.value,
+                                             this.profileEl.value,
+                                             '',                                             
+                                             this.emailInputEl.value,
+                                             this.skillsInputEl.value
+                             );
+        let selStd = this.selectedStudent;                     
+
         event.preventDefault();
+
+        if ( this.students.find( el => 
+                                       el !== selStd && el.equal( newStudent )
+                                        ) ) {
+            this.showMessage( 'Email must be unique' );
+            return;
+        }
+        this.putStudentToTable( newStudent );
+        this.formEl.reset();                              
     }
     //--------------------------------------------------------------------------------
-    updateStudent( student ) {
-        let stdIndex = this.students.findIndex( el => el.email === student.email );
-        
-        if( stdindex !== -1  ) {
-            this.studens[ stdIndex ] = student;
-        }
+    putStudentToTable( student ) {
+        if ( this.selectedStudent ) {
+            student.putStudentIntoLine( this.selectedStudent.getDocEl() );            
+            this.selectedStudent = null;
+        } else {            
+            this.students.push( student );
+            this.tableEl.appendChild( student.getStudentAsLine() );
+            if ( this.sortKey ) {
+                this.sort( this.sortKey );
+            }
+        }   
+        student.setHandlers( this.viewStudent, this.removeStudent, this.showMessage );     
     }    
     //--------------------------------------------------------------------------------
     viewStudent( student ) {
@@ -135,23 +195,25 @@ class App {
         this.profileEl.value = student.img;
     }
     //--------------------------------------------------------------------------------
-    sort( key, columnTitle ) {
-        let sortDir = this.sortKey === key ? -this.sortDir : ASC_SORTING;
+    sort( key, columnTitle = '' ) {
+        let sortDir;
         let tempNodes = this.students.map( el => el.getDocEl() );
+
+        if ( columnTitle ) {
+            sortDir = this.sortKey === key ? -this.sortDir : ASC_SORTING;
+            this.sortKey = key;
+            this.sortDir = sortDir;
+            this.refreshTableHeader( columnTitle );            
+        } else {
+            sortDir = this.sortDir;
+        }
 
         this.students.sort( ( a, b ) => a[ key ] > b[ key ] ? sortDir : -sortDir );
 
         for ( let i = 0; i < this.students.length; i ++ ) {
-            let student = this.students[ i ];
-            student.putStudentIntoLine( tempNodes[ i ], 
-                                        ( event ) => { this.viewStudent( student ); event.stopPropagation(); },
-                                        ( event ) => { this.removeStudent( student ); event.stopPropagation(); },            
-                                        () => alert( student.fullName ) );
+            this.students[ i ].putStudentIntoLine( tempNodes[ i ] );
+            this.students[ i ].setHandlers( this.viewStudent, this.removeStudent, this.showMessage );
         }
-
-        this.sortKey = key;
-        this.sortDir = sortDir;
-        this.refreshTableHeader( columnTitle );
     }
     //--------------------------------------------------------------------------------
     refreshTableHeader( columnTitle ) {
@@ -167,6 +229,8 @@ class App {
             }            
         }
     }
+    //--------------------------------------------------------------------------------
+
 }
 //--------------------------------------------------------------------------------
 class Student {
@@ -181,11 +245,15 @@ class Student {
         this.docEl = null;
     }
     //--------------------------------------------------------------------------------
+    equal( student ) {
+        return ( '' + this.email ).toLocaleLowerCase()  === ( '' + student.email ).toLocaleLowerCase();
+    }
+    //--------------------------------------------------------------------------------
     getDocEl() {
         return this.docEl;
     }
     //--------------------------------------------------------------------------------
-    getStudentAsLine( editHandler, removeHandler, alertHandler ) {
+    getStudentAsLine() {
         let rowEl = document.createElement( 'tr' );
         let controlEl;        
         let imgEl;
@@ -200,35 +268,44 @@ class Student {
 
         controlEl = crtEl('span' );
         controlEl.className = 'glyphicon glyphicon-edit';
-        ( tdEl = crtEl( 'td' ) ).onclick = editHandler;
+        tdEl = crtEl( 'td' );
         tdEl.className = 'clickable';
         rowEl.appendChild( tdEl ).appendChild(controlEl )
                                  .appendChild( crtTxt( 'Edit' ) );       
 
         controlEl = crtEl('span' );
         controlEl.className = 'glyphicon glyphicon-trash';
-        ( tdEl = crtEl( 'td' ) ).onclick = removeHandler;
+        tdEl = crtEl( 'td' );
         tdEl.className = 'clickable';
         rowEl.appendChild( tdEl ).appendChild( controlEl )
                                  .appendChild( crtTxt( 'Remove' ) );
-
-        rowEl.onclick = alertHandler;                        
         this.docEl = rowEl;
 
         return rowEl;
     }
     //--------------------------------------------------------------------------------
-    putStudentIntoLine( docEl, editHandler, removeHandler, alertHandler ) {
+    putStudentIntoLine( docEl ) {
         docEl.children[ 0 ].innerText = this.fullName;
         docEl.children[ 1 ].innerText = this.email;
         docEl.children[ 2 ].children[ 0 ].src = this.img;
-        docEl.children[ 3 ].innerText = this.skills;
-        docEl.children[ 4 ].onclick = editHandler;
-        docEl.children[ 5 ].onclick = removeHandler;
-        
-        docEl.onclick = alertHandler;                        
+        docEl.children[ 3 ].innerText = this.skills;        
 
         this.docEl = docEl;
+    }
+    //--------------------------------------------------------------------------------
+    setHandlers( editHandler, removeHandler, alertHandler ) {
+        let student = this;
+
+        if ( !this.docEl ) {
+            return;
+        }
+        this.docEl.onclick = () => alertHandler( student.fullName );
+        this.docEl.children[ 4 ].onclick = ( event ) => { editHandler( student ); 
+                                                          event.stopPropagation();
+                                                        }
+        this.docEl.children[ 5 ].onclick = ( event ) => { removeHandler( student );
+                                                          event.stopPropagation(); 
+                                                        }
     }
 }
 //--------------------------------------------------------------------------------
@@ -393,7 +470,8 @@ class Student {
             email: 'antonzhygalov@gmail.com',
             skills: ['JavaScript', 'HTML', 'CSS']
         }
-    ];
+    ];    
+    //Here we just inject App instanse creation and rendering
     app = new App( students );
     app.render();
 })();

@@ -1,34 +1,66 @@
 .clickable {
     cursor: pointer;
 }
+#container {
+    position: relative;
+}
 #container form {
-    width: 500px;    
-    background-color: grey;    
+    display: flex;
+    justify-content: left;
+    padding-top: 20px; 
+    box-shadow: 0 0 5px 5px rgb( 245, 245, 245 );
 }
-#container table th, td {
-    border: 1px solid grey;
+#field-box {
+    width: calc( 100% - 300px );    
 }
-#container table td {
-    padding: 5px;
+#field-box button {
+    margin-right: 10px;
+    transition: background-color .5s;
+}    
+#image-box {
+    width: 300px;
+    height: 300px;
 }
+#image-box img {
+    max-width: 280px;
+    max-height: 280px;
+}    
+#container table caption {
+    font-size: 30px;
+    padding: 20px 0;
+    color: black;
+}
+#container table tr {
+    transition: background-color .5s;
+}    
 #container table img {
-    max-width: 75px;
-    max-height: 75px;
+    max-width: 50px;
+    max-height: 50px;
+}
+#container table td span:hover {
+    text-decoration: underline;
 }
 #close-message {
     position: absolute;
     top: 5px;
     right: 5px;
+    color: rgb( 132, 53, 52 );
 }
 #message-wrapper {
-    position: absolute;
-    width: 400px;
-    background-color: cyan;
+    margin: 150px auto;
+    width: 95%;
+    max-width: 400px;
+    background-color: rgb( 242, 222, 222 );
     padding: 30px;
-    z-index: 100;
+    position: relative;
+    font-size: 15px;
 }
 #message-cover {
-    position: fixed;
-    width: 100vw;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
     height: 100vh;
+    z-index: 10;
+    background-color: rgba( 255, 255, 255, .3 );
 }

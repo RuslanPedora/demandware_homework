@@ -17,47 +17,73 @@ class App {
                                                          el.skills                                                         
                                                        ));                
         this.selectedStudent = null;
-        this.tableEl = null;
-        this.fromEl = null;
-        this.tableHeaderEl = null;
         this.sortKey = '';
         this.sortDir = ASC_SORTING;        
     }
     //--------------------------------------------------------------------------------
     render() {
-        let containerEl = document.getElementById( 'container' );
-        let formEl = document.createElement( 'form' );
-        let buttonEl;
-        
-        formEl = document.createElement( 'form' );
-        formEl.onsubmit = ( event ) => this.save( event );
-        containerEl.appendChild( formEl );
-
-        this.createFormField( formEl, 'Name', 'nameInputEl', 'text' );
-        this.createFormField( formEl, 'Lastname', 'lastNameInputEl', 'text' );
-        this.createFormField( formEl, 'Email', 'emailInputEl', 'email' );
-        this.createFormField( formEl, 'Skills', 'skillsInputEl', 'text' );
-        this.createFormField( formEl, 'Profile picture', 'profileEl', 'text' );
-
-        buttonEl = document.createElement( 'button' );        
-        buttonEl.type = 'submit';
-        formEl.appendChild( buttonEl ).appendChild( crtTxt( 'Save' ) );
-
-        buttonEl = document.createElement( 'button' );
-        buttonEl.type = 'reset';
-        buttonEl.onclick = () => this.selectedStudent = null;
-        formEl.appendChild( buttonEl ).appendChild( crtTxt( 'Cancel' ) );
-
-        this.containerEl = containerEl;
-        this.formEl = formEl;
+        this.containerEl = document.getElementById( 'container' );
+        this.renderForm();
         this.renderPopup();
         this.renderTable();        
+    }
+    //--------------------------------------------------------------------------------
+    renderForm() {
+        let formEl = crtEl( 'form' );
+        let buttonEl, divEl, imgEl;
+        let buttonGroupEl = crtEl( 'div' );
+        let buttonWrapperEl = crtEl( 'div' );
+        
+        formEl = crtEl( 'form' );
+        formEl.onsubmit = ( event ) => this.save( event );
+        formEl.className = 'form-horizontal';
+
+        divEl = crtEl( 'div' );
+        divEl.id = 'field-box';
+        this.createFormField( divEl, 'Name:', 'nameInputEl', 'text', '^[A-Za-z]+$', 'Name should consist of alpha symbols' );
+        this.createFormField( divEl, 'Lastname:', 'lastNameInputEl', 'text', '^[A-Za-z]+$', 'Lastname should consist of alpha symbols'  );
+        this.createFormField( divEl, 'Email:', 'emailInputEl', 'email' );
+        this.createFormField( divEl, 'Skills:', 'skillsInputEl', 'text', '^([\\w]+([,][\\w]+)*)?$', 'Skills must be comma separated strings [A-Za-z0-9_]' );
+        this.createFormField( divEl, 'Profile picture:', 'profileEl', 'text' );        
+        this.profileEl.oninput = () => this.refreshFormImg();
+        this.skillsInputEl.required = false;
+
+        buttonEl = crtEl( 'button' );        
+        buttonEl.className = 'btn btn-default';
+        buttonEl.type = 'submit';
+        buttonWrapperEl.appendChild( buttonEl ).appendChild( crtTxt( 'Save' ) );
+
+        buttonEl = crtEl( 'button' );
+        buttonEl.className = 'btn btn-default';
+        buttonEl.type = 'reset';
+        buttonEl.onclick = () => { this.selectedStudent = null;                                         
+                                   this.refreshFormImg( true );        
+                                 }
+        buttonWrapperEl.appendChild( buttonEl ).appendChild( crtTxt( 'Cancel' ) );
+
+        buttonWrapperEl.className = 'col-sm-offset-2 col-sm-6';
+        buttonGroupEl.appendChild( buttonWrapperEl );
+        buttonGroupEl.className = 'form-group';
+        divEl.appendChild( buttonGroupEl );
+        formEl.appendChild( divEl );
+
+        divEl = crtEl( 'div' );
+        divEl.id = 'image-box';
+        this.imgEl = crtEl( 'img' );
+        divEl.appendChild( this.imgEl );
+        formEl.appendChild( divEl );
+
+        this.formEl = formEl;        
+        this.containerEl.appendChild( crtEl( 'h2') ).appendChild( crtTxt( 'Create/change student' ) );
+        this.containerEl.appendChild( formEl );
     }
     //--------------------------------------------------------------------------------
     renderTable() {
         let rowEl;
         let thEl;
-        let tableEl = document.createElement( 'table' );
+        let tableEl = crtEl( 'table' );
+        let theaderEl = crtEl( 'thead' );
+        let tbodyEl = crtEl( 'tbody' );
 
         this.viewStudent = this.viewStudent.bind( this );
         this.removeStudent = this.removeStudent.bind( this );
@@ -72,21 +98,24 @@ class App {
         thEl = crtEl( 'th' );
         thEl.colSpan = 2;
         rowEl.appendChild( thEl ).appendChild( crtTxt( 'Controls' ) );        
-
-        tableEl.appendChild( rowEl );
+        theaderEl.appendChild( rowEl );
         this.tableHeaderEl = rowEl;
 
+        tableEl.appendChild( crtEl( 'caption' ) ).appendChild( crtTxt( 'Students' ) );        
+        tableEl.appendChild( theaderEl );
+
         for( let student of this.students ) {
-            tableEl.appendChild( student.getStudentAsLine() );
+            tbodyEl.appendChild( student.getStudentAsLine() );
             student.setHandlers( this.viewStudent, this.removeStudent, this.showMessage );
         }
+
+        tableEl.appendChild( tbodyEl );
         this.containerEl.appendChild( tableEl );
         this.refreshTableHeader( '' );
-        if ( !this.tableEl ) {
-            this.tableEl = tableEl;
-        }
+        this.tbodyEl = tbodyEl;
     }
     //--------------------------------------------------------------------------------
+    //this method creates message box
     renderPopup() {        
         let closeEl = crtEl( 'div' );
         let messageEl = crtEl( 'div' );        
@@ -113,42 +142,66 @@ class App {
         this.showMessage = this.showMessage.bind( this );
     }
     //--------------------------------------------------------------------------------
+    //this is used to refresh img on the form
+    refreshFormImg( clean = false ) {
+        this.imgEl.src = clean ? '' : this.profileEl.value;
+    }
+    //--------------------------------------------------------------------------------
     showMessage( message ) {
         this.messageEl.innerText = message;
         this.coverEl.style.display = 'initial';
     }
     //--------------------------------------------------------------------------------
+    //this creates th element with sorting handler
     createSortableCol( sortKeyName, columnName ) {
         let thEl;
 
-        ( thEl = crtEl( 'th' ) ).onclick = () => this.sort( sortKeyName, columnName );
-        thEl.appendChild( crtEl( 'span' ) );
+        ( thEl = crtEl( 'th' ) ).onclick = () => this.sort( sortKeyName, columnName );        
         thEl.appendChild( crtTxt( columnName ) );
+        thEl.appendChild( crtEl( 'span' ) );
         thEl.className = 'clickable';
 
         return thEl;
     }
     //--------------------------------------------------------------------------------
-    createFormField( formEl, name, refName, type, pattern ) {
-        let labelEl = document.createElement( 'label' );
-        let inputEl = document.createElement( 'input' );
+    createFormField( formEl, name, refName, type, pattern, title ) {
+        let labelEl = crtEl( 'label' );
+        let inputEl = crtEl( 'input' );
+        let inputWrapperEl = crtEl( 'div' );
+        let wrapperEl = crtEl( 'div' );
 
         this[ refName ] = inputEl;
+        
+        labelEl.className = 'control-label col-sm-2';
 
-        labelEl.appendChild( crtTxt( name ) );        
-        labelEl.appendChild( inputEl );
         inputEl.placeholder = 'Input student ' + name;
         inputEl.required = true;
         inputEl.type = type;
-        formEl.appendChild( labelEl );
-        formEl.appendChild( crtEl( 'br' ) );
+        inputEl.className = 'form-control';
+        if ( pattern ) {
+            inputEl.pattern = pattern;
+            inputEl.title = title;
+        }
+
+        inputWrapperEl.className = 'col-sm-6';
+        inputWrapperEl.appendChild( inputEl );
+
+        wrapperEl.appendChild( labelEl ).appendChild( crtTxt( name ) );
+        wrapperEl.appendChild( inputWrapperEl );
+        wrapperEl.className = 'form-group';
+        formEl.appendChild( wrapperEl );
     }
     //--------------------------------------------------------------------------------
+    //this is remove student handler
     removeStudent( student ) {
         this.students = this.students.filter( el => el !== student );
-        this.tableEl.removeChild( student.getDocEl() );        
+        this.tbodyEl.removeChild( student.getDocEl() );        
+        if ( this.selectedStudent === student ) {
+            this.selectedStudent = null;
+        }
     }
     //--------------------------------------------------------------------------------
+    //this is saving handler
     save( event ) {        
         let newStudent = new Student( this.nameInputEl.value,
                                              this.lastNameInputEl.value,
@@ -160,7 +213,8 @@ class App {
         let selStd = this.selectedStudent;                     
 
         event.preventDefault();
-
+        //if block bellow intended to control email uniqueness
+        //without this block creating twin rows is allowed like in excel
         if ( this.students.find( el => 
                                        el !== selStd && el.equal( newStudent )
                                         ) ) {
@@ -169,22 +223,28 @@ class App {
         }
         this.putStudentToTable( newStudent );
         this.formEl.reset();                              
+        this.refreshFormImg();
     }
     //--------------------------------------------------------------------------------
+    //this method put new or changed student into table with sorting controlling
     putStudentToTable( student ) {
         if ( this.selectedStudent ) {
-            student.putStudentIntoLine( this.selectedStudent.getDocEl() );            
-            this.selectedStudent = null;
+            let docEl = this.selectedStudent.getDocEl();
+
+            this.selectedStudent.copyFrom( student );
+            this.selectedStudent.putStudentIntoLine( docEl );            
+            this.selectedStudent = null;            
         } else {            
             this.students.push( student );
-            this.tableEl.appendChild( student.getStudentAsLine() );
+            this.tbodyEl.appendChild( student.getStudentAsLine() );
+            student.setHandlers( this.viewStudent, this.removeStudent, this.showMessage );     
             if ( this.sortKey ) {
                 this.sort( this.sortKey );
             }
-        }   
-        student.setHandlers( this.viewStudent, this.removeStudent, this.showMessage );     
+        }
     }    
     //--------------------------------------------------------------------------------
+    //this method extracts studetns data from table row to form
     viewStudent( student ) {
         this.selectedStudent = student;
 
@@ -193,8 +253,10 @@ class App {
         this.emailInputEl.value = student.email;
         this.skillsInputEl.value = student.skills;
         this.profileEl.value = student.img;
+        this.refreshFormImg();
     }
     //--------------------------------------------------------------------------------
+    //this is sorting handler 
     sort( key, columnTitle = '' ) {
         let sortDir;
         let tempNodes = this.students.map( el => el.getDocEl() );
@@ -216,6 +278,7 @@ class App {
         }
     }
     //--------------------------------------------------------------------------------
+    //this method is intended to refresh table header after sorting 
     refreshTableHeader( columnTitle ) {
         for ( let el of this.tableHeaderEl.children ) {
             if ( el.children.length > 0 ) {
@@ -229,8 +292,6 @@ class App {
             }            
         }
     }
-    //--------------------------------------------------------------------------------
-
 }
 //--------------------------------------------------------------------------------
 class Student {
@@ -242,6 +303,7 @@ class Student {
         this.coverImg = coverImg;
         this.email = email;
         this.skills = skills;
+        //the property bellow is intended to store link with tr node related to student
         this.docEl = null;
     }
     //--------------------------------------------------------------------------------
@@ -249,12 +311,17 @@ class Student {
         return ( '' + this.email ).toLocaleLowerCase()  === ( '' + student.email ).toLocaleLowerCase();
     }
     //--------------------------------------------------------------------------------
+    copyFrom( student ) {
+        Object.assign( this, student );
+    }
+    //--------------------------------------------------------------------------------
     getDocEl() {
         return this.docEl;
     }
     //--------------------------------------------------------------------------------
+    //this method creates a tr element and link it with student instance
     getStudentAsLine() {
-        let rowEl = document.createElement( 'tr' );
+        let rowEl = crtEl( 'tr' );
         let controlEl;        
         let imgEl;
         let tdEl;
@@ -266,17 +333,15 @@ class Student {
         imgEl.alt = 'Userpic';
         rowEl.appendChild( crtEl( 'td' ) ).appendChild( crtTxt( this.skills ) );
 
-        controlEl = crtEl('span' );
-        controlEl.className = 'glyphicon glyphicon-edit';
-        tdEl = crtEl( 'td' );
-        tdEl.className = 'clickable';
+        controlEl = crtEl('span' );        
+        controlEl.className = 'glyphicon glyphicon-edit clickable';
+        tdEl = crtEl( 'td' );        
         rowEl.appendChild( tdEl ).appendChild(controlEl )
                                  .appendChild( crtTxt( 'Edit' ) );       
 
         controlEl = crtEl('span' );
-        controlEl.className = 'glyphicon glyphicon-trash';
-        tdEl = crtEl( 'td' );
-        tdEl.className = 'clickable';
+        controlEl.className = 'glyphicon glyphicon-trash clickable';
+        tdEl = crtEl( 'td' );        
         rowEl.appendChild( tdEl ).appendChild( controlEl )
                                  .appendChild( crtTxt( 'Remove' ) );
         this.docEl = rowEl;
@@ -284,6 +349,8 @@ class Student {
         return rowEl;
     }
     //--------------------------------------------------------------------------------
+    //this method just put students data to existed tr element
+    //it's order sensitive per sequense getStudentAsLine
     putStudentIntoLine( docEl ) {
         docEl.children[ 0 ].innerText = this.fullName;
         docEl.children[ 1 ].innerText = this.email;
@@ -293,6 +360,8 @@ class Student {
         this.docEl = docEl;
     }
     //--------------------------------------------------------------------------------
+    //this method sets handlers related to edit, remove and tr-click events
+    //it's order sensitive per sequense getStudentAsLine    
     setHandlers( editHandler, removeHandler, alertHandler ) {
         let student = this;
 
@@ -300,12 +369,12 @@ class Student {
             return;
         }
         this.docEl.onclick = () => alertHandler( student.fullName );
-        this.docEl.children[ 4 ].onclick = ( event ) => { editHandler( student ); 
-                                                          event.stopPropagation();
-                                                        }
-        this.docEl.children[ 5 ].onclick = ( event ) => { removeHandler( student );
-                                                          event.stopPropagation(); 
-                                                        }
+        this.docEl.children[ 4 ].children[ 0 ].onclick = ( event ) => { editHandler( student ); 
+                                                                        event.stopPropagation();
+                                                         }
+        this.docEl.children[ 5 ].children[ 0 ].onclick = ( event ) => { removeHandler( student );
+                                                                        event.stopPropagation(); 
+                                                         }
     }
 }
 //--------------------------------------------------------------------------------
